@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#16213e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>FingerPoint - Absensi Pintar</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root{--p:#16213e;--pl:#0f3460;--a:#e94560;--a2:#533483;--ok:#00b894;--warn:#fdcb6e;--bad:#e94560;--bg:#0f0f23;--c:#1a1a3e;--c2:#222255;--t:#fff;--t2:#8888aa;--gold:#ffd700;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden;}
+    .scr{display:none;min-height:100vh;animation:fu .3s ease;}
+    .scr.on{display:flex;flex-direction:column;}
+    @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+    @keyframes glow{0%,100%{box-shadow:0 0 8px var(--a)}50%{box-shadow:0 0 24px var(--a),0 0 48px var(--a)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(-250px) rotate(720deg);opacity:0}}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+    .topbar{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--p);position:sticky;top:0;z-index:100;}
+    .topbar h1{font-size:16px;font-weight:800;}
+    .topbar .right{display:flex;align-items:center;gap:8px;}
+    .pill{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+    .pill.ok{background:rgba(0,184,148,.2);color:var(--ok);}
+    .pill.off{background:rgba(233,69,96,.2);color:var(--bad);}
+    .clock{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums;}
+
+    /* ===== SPLASH ===== */
+    #splash{align-items:center;justify-content:center;gap:16px;background:linear-gradient(135deg,#16213e,#0f3460 50%,#533483);}
+    #splash .logo{font-size:56px;animation:float 2s ease-in-out infinite;}
+    #splash h1{font-size:26px;font-weight:900;}
+    #splash p{color:var(--t2);font-size:13px;}
+    .loader{width:40px;height:4px;background:var(--c);border-radius:2px;margin-top:16px;overflow:hidden;}
+    .loader::after{content:'';display:block;width:50%;height:100%;background:var(--a);border-radius:2px;animation:ld 1s ease-in-out infinite;}
+    @keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+
+    /* ===== PIN ===== */
+    #pinScr{align-items:center;justify-content:center;padding:20px;}
+    .pin-hd{text-align:center;margin-bottom:24px;}
+    .pin-hd .av{width:72px;height:72px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 10px;border:3px solid var(--a);}
+    .pin-hd h2{font-size:18px;}
+    .pin-hd p{color:var(--t2);font-size:12px;margin-top:2px;}
+    .pin-dots{display:flex;gap:14px;margin-bottom:32px;}
+    .pin-dot{width:14px;height:14px;border-radius:50%;background:var(--c2);border:2px solid #444;transition:.2s;}
+    .pin-dot.f{background:var(--a);border-color:var(--a);animation:bounce .2s;}
+    .pin-dot.err{background:var(--bad);border-color:var(--bad);animation:shake .3s;}
+    .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:260px;}
+    .pk{width:68px;height:68px;border-radius:50%;border:none;background:var(--c);color:var(--t);font-size:22px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;margin:0 auto;-webkit-user-select:none;user-select:none;}
+    .pk:active{background:var(--c2);transform:scale(.95);}
+    .pk.act{background:var(--a);}
+    .pk.emp{background:transparent;cursor:default;}
+    .pin-err{color:var(--bad);font-size:12px;margin-top:12px;text-align:center;min-height:18px;}
+    .user-sel{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding:4px 0;max-width:100%;}
+    .user-chip{padding:6px 14px;border-radius:20px;background:var(--c);font-size:12px;white-space:nowrap;cursor:pointer;border:2px solid transparent;transition:.2s;}
+    .user-chip.on{border-color:var(--a);background:rgba(233,69,96,.15);}
+
+    /* ===== HOME ===== */
+    #homeScr .greeting{padding:20px 16px 0;}
+    #homeScr .greeting h2{font-size:20px;font-weight:800;}
+    #homeScr .greeting p{color:var(--t2);font-size:13px;}
+    .action-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;}
+    .ac{background:var(--c);border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:.2s;border:2px solid transparent;}
+    .ac:active{transform:scale(.97);}
+    .ac.in{border-color:var(--ok);}
+    .ac.out{border-color:var(--warn);}
+    .ac .icon{font-size:36px;margin-bottom:8px;}
+    .ac h3{font-size:14px;font-weight:700;}
+    .ac p{font-size:11px;color:var(--t2);margin-top:4px;}
+    .today-log{padding:0 16px 16px;}
+    .today-log h3{font-size:13px;font-weight:700;color:var(--t2);margin-bottom:8px;}
+    .log-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--c);border-radius:10px;margin-bottom:6px;}
+    .log-item .dot{width:8px;height:8px;border-radius:50%;}
+    .log-item .dot.in{background:var(--ok);}
+    .log-item .dot.out{background:var(--warn);}
+    .log-item .info{flex:1;}
+    .log-item .info strong{font-size:13px;}
+    .log-item .info small{display:block;color:var(--t2);font-size:11px;}
+    .log-item .time{font-size:12px;font-weight:600;color:var(--t2);}
+
+    /* ===== SELFIE ===== */
+    #selfieScr{padding:0;}
+    .cam-hd{padding:12px 16px;display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.6);position:absolute;top:0;left:0;right:0;z-index:10;}
+    .cam-hd .back{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;}
+    .cam-hd h3{font-size:15px;}
+    .cam-box{flex:1;position:relative;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+    .cam-box video{width:100%;height:100%;object-fit:cover;}
+    .cam-ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+    .face-ring{width:200px;height:260px;border-radius:50%;border:3px solid rgba(255,255,255,.5);animation:glow 2s ease-in-out infinite;}
+    .face-ring::after{content:'Posisikan wajah';position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px;color:rgba(255,255,255,.6);}
+    .cam-ctrl{position:absolute;bottom:36px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:36px;pointer-events:all;}
+    .cap-btn{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:var(--a);cursor:pointer;transition:.2s;position:relative;}
+    .cap-btn::after{content:'';position:absolute;inset:5px;border-radius:50%;background:rgba(255,255,255,.2);}
+    .cap-btn:active{transform:scale(.9);}
+    .cam-type{font-size:11px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:12px;}
+
+    /* ===== RESULT ===== */
+    #resScr{align-items:center;justify-content:center;padding:20px;gap:12px;}
+    .res-icon{font-size:56px;animation:pop .4s;}
+    .res-hd{text-align:center;}
+    .res-hd h2{font-size:20px;}
+    .res-hd p{color:var(--t2);font-size:13px;}
+    .res-photo{width:100px;height:130px;border-radius:14px;overflow:hidden;border:3px solid var(--ok);}
+    .res-photo img{width:100%;height:100%;object-fit:cover;}
+    .res-det{background:var(--c);border-radius:12px;padding:14px;width:100%;max-width:300px;}
+    .res-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;}
+    .res-row:last-child{border:none;}
+    .res-row .l{color:var(--t2);}
+    .res-row .v{font-weight:600;}
+    .res-btn{width:100%;max-width:300px;padding:13px;border-radius:12px;border:none;background:var(--a);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
+    .res-btn:active{transform:scale(.98);}
+    .badge-box{background:linear-gradient(135deg,#533483,#e94560);border-radius:14px;padding:16px;width:100%;max-width:300px;text-align:center;animation:pop .4s .2s both;}
+    .badge-box .bi{font-size:44px;animation:float 2s ease-in-out infinite;}
+    .badge-box h3{font-size:14px;margin:6px 0 2px;}
+    .badge-box p{font-size:11px;color:rgba(255,255,255,.7);}
+
+    /* ===== ADMIN ===== */
+    #adminScr .tabs{display:flex;padding:0 16px;gap:0;border-bottom:1px solid rgba(255,255,255,.1);}
+    .tab{padding:10px 16px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;}
+    .tab.on{color:var(--t);border-color:var(--a);}
+    .tab-content{display:none;padding:16px;}
+    .tab-content.on{display:block;}
+    .emp-card{background:var(--c);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+    .emp-card .av{width:40px;height:40px;border-radius:50%;background:var(--c2);display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .emp-card .info{flex:1;}
+    .emp-card .info strong{font-size:13px;}
+    .emp-card .info small{display:block;color:var(--t2);font-size:11px;}
+    .emp-card .st{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:600;}
+    .emp-card .st.hadir{background:rgba(0,184,148,.15);color:var(--ok);}
+    .emp-card .st.alpha{background:rgba(233,69,96,.15);color:var(--bad);}
+    .emp-card .st.telat{background:rgba(253,203,110,.15);color:var(--warn);}
+    .emp-card .st.pulang{background:rgba(15,52,96,.3);color:#7ec8e3;}
+    .empty{text-align:center;color:var(--t2);font-size:13px;padding:40px 0;}
+    .noti-banner{background:linear-gradient(135deg,var(--a),var(--a2));border-radius:12px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+    .noti-banner .icon{font-size:24px;}
+    .noti-banner .text{flex:1;font-size:12px;}
+    .noti-banner .text strong{display:block;font-size:13px;}
+
+    /* ===== PROFILE ===== */
+    #profScr .p-top{background:linear-gradient(135deg,#16213e,#533483);padding:36px 16px 20px;text-align:center;}
+    .p-top .av{width:72px;height:72px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 8px;border:3px solid var(--a);}
+    .p-top h2{font-size:17px;}
+    .p-top p{color:var(--t2);font-size:12px;}
+    .s-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px;}
+    .s-mini{background:var(--c);border-radius:10px;padding:10px 6px;text-align:center;}
+    .s-mini .n{font-size:18px;font-weight:800;}
+    .s-mini .l{font-size:9px;color:var(--t2);margin-top:2px;}
+    .sec{padding:12px 16px 6px;font-size:12px;font-weight:700;color:var(--t2);}
+    .bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px 16px;}
+    .bg-card{background:var(--c);border-radius:10px;padding:12px 6px;text-align:center;}
+    .bg-card.earn{border:2px solid var(--gold);}
+    .bg-card.lock{opacity:.35;filter:grayscale(1);}
+    .bg-card .e{font-size:28px;margin-bottom:4px;}
+    .bg-card .nm{font-size:9px;font-weight:600;line-height:1.2;}
+    .bg-card.earn::after{content:'✓';position:absolute;top:4px;right:6px;font-size:9px;background:var(--ok);color:#fff;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+    .bg-card{position:relative;}
+    .out-btn{margin:8px 16px 24px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--t2);font-size:13px;cursor:pointer;}
+
+    /* ===== MODAL ===== */
+    .mo{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:5000;padding:20px;}
+    .mo.on{display:flex;}
+    .mo-box{background:var(--c);border-radius:18px;padding:28px 20px;max-width:300px;width:100%;text-align:center;animation:pop .3s;}
+    .mo-box .bi{font-size:56px;animation:float 2s ease-in-out infinite;}
+    .mo-box h2{font-size:16px;margin:10px 0 4px;color:var(--gold);}
+    .mo-box p{font-size:12px;color:var(--t2);margin-bottom:16px;}
+    .mo-box .btn{padding:10px 28px;border-radius:10px;border:none;background:var(--a);color:#fff;font-weight:600;cursor:pointer;}
+
+    .cc{position:fixed;inset:0;pointer-events:none;z-index:9999;}
+    .cp{position:absolute;width:10px;height:10px;border-radius:2px;animation:confetti 1.5s ease-out forwards;}
+  </style>
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <section class="scr on" id="splash">
+    <div class="logo">🔐</div>
+    <h1>FingerPoint</h1>
+    <p>Absensi PIN + Selfie + Achievement</p>
+    <div class="loader"></div>
+  </section>
+
+  <!-- PIN -->
+  <section class="scr" id="pinScr">
+    <div class="pin-hd">
+      <div class="av" id="pinAvatar">👤</div>
+      <h2 id="pinGreeting">Masukkan PIN</h2>
+      <p id="pinName">Pilih akunmu dulu</p>
+    </div>
+    <div class="user-sel" id="userSel"></div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-pad" id="pinPad"></div>
+    <div class="pin-err" id="pinErr"></div>
+  </section>
+
+  <!-- HOME -->
+  <section class="scr" id="homeScr">
+    <div class="topbar">
+      <h1>🔐 FingerPoint</h1>
+      <div class="right">
+        <span class="clock" id="clock"></span>
+        <span class="pill ok" id="statusPill">Online</span>
+      </div>
+    </div>
+    <div class="greeting">
+      <h2 id="homeGreet">Selamat Pagi!</h2>
+      <p id="homeName">Budi Santoso</p>
+    </div>
+    <div class="action-cards">
+      <div class="ac in" onclick="startAbsen('IN')">
+        <div class="icon">🌅</div>
+        <h3>Absen Masuk</h3>
+        <p>Tap untuk check-in</p>
+      </div>
+      <div class="ac out" onclick="startAbsen('OUT')">
+        <div class="icon">🌙</div>
+        <h3>Absen Pulang</h3>
+        <p>Tap untuk check-out</p>
+      </div>
+    </div>
+    <div class="today-log">
+      <h3>📋 Log Hari Ini</h3>
+      <div id="todayLog"><div class="empty">Belum ada aktivitas</div></div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <div class="noti-banner" id="reminderBanner" style="display:none;">
+        <div class="icon">⚠️</div>
+        <div class="text">
+          <strong>Belum Absen!</strong>
+          <span id="reminderText">Kamu belum absen hari ini</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="ac" onclick="go('adminScr')" style="padding:14px;">
+        <div class="icon">📊</div><h3>Admin</h3>
+      </button>
+      <button class="ac" onclick="go('profScr')" style="padding:14px;">
+        <div class="icon">👤</div><h3>Profil</h3>
+      </button>
+    </div>
+  </section>
+
+  <!-- SELFIE -->
+  <section class="scr" id="selfieScr">
+    <div class="cam-hd">
+      <button class="back" onclick="go('homeScr')">←</button>
+      <h3 id="selfieTitle">Absen Masuk</h3>
+    </div>
+    <div class="cam-box">
+      <video id="camFeed" autoplay playsinline></video>
+      <canvas id="camCanvas" style="display:none;"></canvas>
+      <div class="cam-ov"><div class="face-ring"></div></div>
+      <div class="cam-ctrl">
+        <div class="cam-type" id="camType">📷 Depan</div>
+        <button class="cap-btn" onclick="capture()"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="scr" id="resScr">
+    <div class="res-icon" id="resIcon">✅</div>
+    <div class="res-hd">
+      <h2 id="resTitle">Absen Berhasil!</h2>
+      <p id="resSub">Selamat bekerja!</p>
+    </div>
+    <div class="res-photo" id="resPhoto"><img id="resPhotoImg" src=""></div>
+    <div class="res-det">
+      <div class="res-row"><span class="l">Karyawan</span><span class="v" id="rName">-</span></div>
+      <div class="res-row"><span class="l">Tanggal</span><span class="v" id="rTgl">-</span></div>
+      <div class="res-row"><span class="l">Jam</span><span class="v" id="rJam">-</span></div>
+      <div class="res-row"><span class="l">Status</span><span class="v" id="rStat">-</span></div>
+    </div>
+    <div id="badgeCtn"></div>
+    <button class="res-btn" id="resBtnBack" onclick="go('homeScr')">Kembali</button>
+    <button class="res-btn" style="background:var(--c);" onclick="go('profScr')">Lihat Profil & Badge</button>
+  </section>
+
+  <!-- ADMIN -->
+  <section class="scr" id="adminScr">
+    <div class="topbar">
+      <h1>📊 Admin Dashboard</h1>
+      <div class="right"><span class="clock" id="clock2"></span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab on" onclick="switchTab('today',this)">Hari Ini</div>
+      <div class="tab" onclick="switchTab('all',this)">Semua Karyawan</div>
+      <div class="tab" onclick="switchTab('history',this)">Riwayat</div>
+    </div>
+    <div class="tab-content on" id="tab-today"></div>
+    <div class="tab-content" id="tab-all"></div>
+    <div class="tab-content" id="tab-history"></div>
+    <div style="padding:16px;">
+      <button class="res-btn" onclick="go('homeScr')">← Kembali</button>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="scr" id="profScr">
+    <div class="p-top">
+      <div class="av" id="pAv">👤</div>
+      <h2 id="pName">-</h2>
+      <p id="pDept">-</p>
+    </div>
+    <div class="s-row" id="pStats"></div>
+    <div class="sec">🏅 Badge Saya</div>
+    <div class="bg-grid" id="pBadges"></div>
+    <button class="out-btn" onclick="go('homeScr')">← Kembali</button>
+    <button class="out-btn" onclick="logout()">🚪 Logout</button>
+  </section>
+
+  <!-- BADGE MODAL -->
+  <div class="mo" id="badgeModal">
+    <div class="mo-box">
+      <div class="bi" id="moIcon">🏅</div>
+      <h2 id="moName">Achievement!</h2>
+      <p id="moDesc">-</p>
+      <button class="btn" onclick="closeModal()">Keren!</button>
+    </div>
+  </div>
+
+  <div class="cc" id="cc"></div>
+
+<script>
+// =================== DATA AKUN ===================
+const USERS = [
+  { id: 1, nama: 'Budi Santoso', nip: 'NIP001', dept: 'IT', pin: '1234', avatar: '👨‍💻' },
+  { id: 2, nama: 'Sari Dewi', nip: 'NIP002', dept: 'HRD', pin: '5678', avatar: '👩‍💼' },
+  { id: 3, nama: 'Andi Wijaya', nip: 'NIP003', dept: 'Keuangan', pin: '2468', avatar: '👨‍🔧' },
+  { id: 4, nama: 'Rina Putri', nip: 'NIP004', dept: 'Marketing', pin: '1357', avatar: '👩‍🎨' },
+];
+
+const BADGES = [
+  { id:'shubuh',name:'Si Paling Shubuh',icon:'🌅',desc:'5 hari berturut absen sebelum 6:30' },
+  { id:'rajin',name:'Si Rajin Absen',icon:'📋',desc:'30 hari absen berturut' },
+  { id:'tepat',name:'Si Tepat Waktu',icon:'⏰',desc:'Sebulan penuh tidak terlambat' },
+  { id:'lembur',name:'Si Pulang Paksa',icon:'🌙',desc:'Lembur 10+ kali sebulan' },
+  { id:'pertama',name:'Si Absen Pertama',icon:'🥇',desc:'Pertama absen di tanggal 1' },
+  { id:'fotografer',name:'Si Fotografer',icon:'📸',desc:'Selfie 30+ kali sebulan' },
+  { id:'misterius',name:'Si Misterius',icon:'🕵️',desc:'Absen jam 3-5 pagi' },
+  { id:'dunia',name:'Si Dunia Tidak Adil',icon:'😅',desc:'Terlambat 5 hari berturut' },
+  { id:'teman',name:'Si Teman Sejati',icon:'👥',desc:'Absen bareng teman 20+ kali' },
+  { id:'tahan',name:'Si Tahan Banting',icon:'💪',desc:'1 tahun tanpa cuti' },
+  { id:'juara',name:'Si Juara Bulanan',icon:'🏆',desc:'Peringkat 1 absensi' },
+  { id:'legenda',name:'Si Legenda',icon:'👑',desc:'Kumpulkan 10 badge' },
+];
+
+// =================== STATE ===================
+let S = {
+  currentUser: null,
+  pin: '',
+  absenType: 'IN',
+  stream: null,
+  facingMode: 'user',
+  history: JSON.parse(localStorage.getItem('fp_history')||'[]'),
+  badges: JSON.parse(localStorage.getItem('fp_badges')||'[]'),
+};
+
+// =================== INIT ===================
+document.addEventListener('DOMContentLoaded',()=>{
+  buildPad();
+  updateClock();
+  setInterval(updateClock,1000);
+  setTimeout(()=>go('pinScr'),1500);
+  initNotif();
+});
+
+// =================== NAV ===================
+function go(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if(id==='homeScr') updateHome();
+  if(id==='adminScr') updateAdmin();
+  if(id==='profScr') updateProfile();
+  if(id==='selfieScr') startCam();
+  if(id!=='selfieScr') stopCam();
+}
+
+// =================== CLOCK ===================
+function updateClock(){
+  const now=new Date();
+  const t=now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+  document.querySelectorAll('.clock').forEach(c=>c.textContent=t+' | '+d);
+}
+
+// =================== USER SELECTOR ===================
+function renderUserSel(){
+  document.getElementById('userSel').innerHTML=USERS.map(u=>
+    `<div class="user-chip ${S.currentUser&&S.currentUser.id===u.id?'on':''}" onclick="selectUser(${u.id})">${u.avatar} ${u.nama.split(' ')[0]}</div>`
+  ).join('');
+}
+
+function selectUser(id){
+  S.currentUser=USERS.find(u=>u.id===id);
+  S.pin='';
+  updateDots();
+  renderUserSel();
+  document.getElementById('pinAvatar').textContent=S.currentUser.avatar;
+  document.getElementById('pinGreeting').textContent='Masukkan PIN';
+  document.getElementById('pinName').textContent=S.currentUser.nama+' • '+S.currentUser.dept;
+}
+
+// =================== PIN PAD ===================
+function buildPad(){
+  const keys=[1,2,3,4,5,6,7,8,9,'',0,'⌫'];
+  document.getElementById('pinPad').innerHTML=keys.map(k=>{
+    if(k==='')return '<button class="pk emp"></button>';
+    if(k==='⌫')return `<button class="pk" onclick="pinDel()"><span>⌫</span></button>`;
+    return `<button class="pk" onclick="pinAdd('${k}')">${k}</button>`;
+  }).join('');
+  renderUserSel();
+}
+
+function pinAdd(d){
+  if(!S.currentUser){document.getElementById('pinErr').textContent='Pilih akun dulu!';return;}
+  if(S.pin.length>=4)return;
+  S.pin+=d;
+  updateDots();
+  if(S.pin.length===4)setTimeout(checkPin,200);
+}
+
+function pinDel(){S.pin='';updateDots();}
+function updateDots(){
+  document.querySelectorAll('.pin-dot').forEach((d,i)=>{
+    d.className='pin-dot'+(i<S.pin.length?' f':'');
+  });
+}
+
+function checkPin(){
+  if(S.currentUser.pin===S.pin){
+    S.pin='';
+    updateDots();
+    document.getElementById('pinErr').textContent='';
+    go('homeScr');
+  }else{
+    document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('err'));
+    document.getElementById('pinErr').textContent='PIN salah!';
+    setTimeout(()=>{S.pin='';updateDots();document.getElementById('pinErr').textContent='';},700);
+  }
+}
+
+// =================== HOME ===================
+function updateHome(){
+  if(!S.currentUser)return;
+  const h=S.currentUser;
+  const now=new Date();
+  const hr=now.getHours();
+  const greet=hr<11?'Selamat Pagi ☀️':hr<15?'Selamat Siang 🌤️':hr<18?'Selamat Sore 🌅':'Selamat Malam 🌙';
+  document.getElementById('homeGreet').textContent=greet;
+  document.getElementById('homeName').textContent=h.nama+' • '+h.dept;
+
+  // Today log
+  const today=now.toLocaleDateString('id-ID');
+  const logs=S.history.filter(l=>l.userId===h.id&&l.tanggal===today);
+  const logEl=document.getElementById('todayLog');
+
+  if(!logs.length){logEl.innerHTML='<div class="empty">Belum ada aktivitas hari ini</div>';}
+  else{logEl.innerHTML=logs.map(l=>`
+    <div class="log-item">
+      <div class="dot ${l.tipe.toLowerCase()}"></div>
+      <div class="info"><strong>Absen ${l.tipe==='IN'?'Masuk':'Pulang'}</strong><small>${l.keterangan}</small></div>
+      <div class="time">${l.jam}</div>
+    </div>`).join('');}
+
+  // Reminder banner
+  const hasIn=logs.some(l=>l.tipe==='IN');
+  const hasOut=logs.some(l=>l.tipe==='OUT');
+  const banner=document.getElementById('reminderBanner');
+  if(hr>=8&&!hasIn){banner.style.display='flex';document.getElementById('reminderText').textContent='Kamu belum absen masuk hari ini!';}
+  else if(hr>=17&&hasIn&&!hasOut){banner.style.display='flex';document.getElementById('reminderText').textContent='Kamu belum absen pulang!';}
+  else{banner.style.display='none';}
+}
+
+// =================== ABSEN ===================
+function startAbsen(tipe){
+  S.absenType=tipe;
+  document.getElementById('selfieTitle').textContent=tipe==='IN'?'Absen Masuk':'Absen Pulang';
+  go('selfieScr');
+}
+
+// =================== CAMERA ===================
+async function startCam(){
+  try{
+    S.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.facingMode,width:{ideal:640}},audio:false});
+    document.getElementById('camFeed').srcObject=S.stream;
+  }catch(e){alert('Kamera tidak tersedia');go('homeScr');}
+}
+function stopCam(){if(S.stream){S.stream.getTracks().forEach(t=>t.stop());S.stream=null;}}
+function switchCam(){S.facingMode=S.facingMode==='user'?'environment':'user';stopCam();startCam();document.getElementById('camType').textContent=S.facingMode==='user'?'📷 Depan':'📷 Belakang';}
+
+function capture(){
+  const v=document.getElementById('camFeed');
+  const c=document.getElementById('camCanvas');
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  const foto=c.toDataURL('image/jpeg',0.7);
+
+  const now=new Date();
+  const entry={
+    userId:S.currentUser.id,
+    nama:S.currentUser.nama,
+    nip:S.currentUser.nip,
+    dept:S.currentUser.dept,
+    tanggal:now.toLocaleDateString('id-ID'),
+    jam:now.toLocaleTimeString('id-ID'),
+    tipe:S.absenType,
+    foto:foto,
+    keterangan:S.absenType==='IN'?(now.getHours()<8?'Hadir':'Terlambat'):'Pulang',
+    lat:null,lng:null
+  };
+
+  // Get location if available
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      entry.lat=pos.coords.latitude;
+      entry.lng=pos.coords.longitude;
+      saveAbsen(entry);
+    },()=>saveAbsen(entry));
+  }else{saveAbsen(entry);}
+}
+
+function saveAbsen(entry){
+  S.history.push(entry);
+  localStorage.setItem('fp_history',JSON.stringify(S.history));
+
+  const badge=checkBadge(entry);
+  showResult(entry,badge);
+  if(badge)showAchievementNotif(badge);
+}
+
+// =================== RESULT ===================
+function showResult(entry,badge){
+  go('resScr');
+  document.getElementById('resIcon').textContent='✅';
+  document.getElementById('resTitle').textContent='Absen '+entry.tipe+' Berhasil!';
+  document.getElementById('resSub').textContent=entry.tipe==='IN'?'Selamat bekerja!':'Sampai jumpa besok!';
+  document.getElementById('resPhotoImg').src=entry.foto;
+  document.getElementById('rName').textContent=entry.nama;
+  document.getElementById('rTgl').textContent=entry.tanggal;
+  document.getElementById('rJam').textContent=entry.jam;
+  document.getElementById('rStat').textContent=entry.keterangan;
+
+  const btn=document.getElementById('resBtnBack');
+  if(entry.tipe==='OUT'){
+    let count=8;
+    btn.textContent='🚪 Logout dalam '+count+' detik...';
+    btn.onclick=()=>doLogout();
+    const iv=setInterval(()=>{
+      count--;
+      if(count<=0){clearInterval(iv);doLogout();return;}
+      btn.textContent='🚪 Logout dalam '+count+' detik...';
+    },1000);
+  }else{
+    btn.textContent='Kembali';
+    btn.onclick=()=>go('homeScr');
+  }
+
+  const ctn=document.getElementById('badgeCtn');
+  ctn.innerHTML='';
+  if(badge){
+    ctn.innerHTML=`<div class="badge-box"><div class="bi">${badge.icon}</div><h3>${badge.name}</h3><p>${badge.desc}</p></div>`;
+    confetti();
+    setTimeout(()=>showModal(badge),500);
+  }
+}
+
+function doLogout(){
+  S.currentUser=null;S.pin='';updateDots();renderUserSel();
+  document.getElementById('pinAvatar').textContent='👤';
+  document.getElementById('pinGreeting').textContent='Masukkan PIN';
+  document.getElementById('pinName').textContent='Pilih akunmu dulu';
+  go('pinScr');
+}
+
+// =================== BADGES ===================
+function checkBadge(e){
+  const uid=e.userId;
+  const my=S.history.filter(h=>h.userId===uid);
+  let nb=null;
+
+  // Shubuh: 5 hari berturut sebelum 6:30
+  let streak=0;
+  for(let i=my.length-1;i>=Math.max(0,my.length-5);i--){
+    const p=my[i].jam.split(':');const hr=+p[0],mn=+p[1];
+    if(hr<6||(hr===6&&mn<=30))streak++;else break;
+  }
+  if(streak>=5)nb=award('shubuh');
+
+  // Rajin: 30 entries
+  if(my.length>=30)nb=award('rajin')||nb;
+
+  // Tepat waktu: semua sebelum jam 8
+  const thisMonth=my.filter(h=>{const d=new Date(h.tanggal);const now=new Date();return d.getMonth()===now.getMonth();});
+  if(thisMonth.length>=10&&thisMonth.every(h=>+h.jam.split(':')[0]<8))nb=award('tepat')||nb;
+
+  // Pertama di tanggal 1
+  if(new Date().getDate()===1&&my.length===1)nb=award('pertama')||nb;
+
+  // Misterius: jam 3-5
+  if(my.filter(h=>{const hr=+h.jam.split(':')[0];return hr>=3&&hr<=5;}).length>=3)nb=award('misterius')||nb;
+
+  // Dunia tidak adil: 5 terlambat berturut
+  let tl=0;
+  for(let i=my.length-1;i>=Math.max(0,my.length-5);i--){if(my[i].keterangan==='Terlambat')tl++;else break;}
+  if(tl>=5)nb=award('dunia')||nb;
+
+  // Legenda: 10 badge
+  if(S.badges.length>=10)nb=award('legenda')||nb;
+
+  return nb;
+}
+
+function award(id){
+  if(S.badges.includes(id))return null;
+  const b=BADGES.find(x=>x.id===id);
+  if(!b)return null;
+  S.badges.push(id);
+  localStorage.setItem('fp_badges',JSON.stringify(S.badges));
+  return b;
+}
+
+// =================== ADMIN ===================
+function updateAdmin(){
+  switchTab('today',document.querySelector('.tab.on'));
+}
+
+function switchTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('on'));
+  document.getElementById('tab-'+tab).classList.add('on');
+
+  const now=new Date();
+  const today=now.toLocaleDateString('id-ID');
+
+  if(tab==='today'){
+    const el=document.getElementById('tab-today');
+    // Karyawan yang sudah absen
+    const absented=S.history.filter(h=>h.tanggal===today&&h.tipe==='IN').map(h=>h.userId);
+    const hasOut=S.history.filter(h=>h.tanggal===today&&h.tipe==='OUT').map(h=>h.userId);
+
+    let html='<h3 style="font-size:14px;margin-bottom:12px;">✅ Sudah Absen ('+absented.length+'/'+USERS.length+')</h3>';
+
+    USERS.forEach(u=>{
+      const inLog=S.history.find(h=>h.userId===u.id&&h.tanggal===today&&h.tipe==='IN');
+      const outLog=S.history.find(h=>h.userId===u.id&&h.tanggal===today&&h.tipe==='OUT');
+      let status,cls;
+      if(inLog){status=outLog?'Pulang ✅':inLog.keterangan==='Terlambat'?'Hadir (Terlambat) ⏰':'Hadir ✅';cls=outLog?'pulang':inLog.keterangan==='Terlambat'?'telat':'hadir';}
+      else{status='Belum Absen ❌';cls='alpha';}
+
+      html+=`<div class="emp-card">
+        <div class="av">${u.avatar}</div>
+        <div class="info"><strong>${u.nama}</strong><small>${u.nip} • ${u.dept}${inLog?' • Masuk: '+inLog.jam:''}${outLog?' • Pulang: '+outLog.jam:''}</small></div>
+        <span class="st ${cls}">${status}</span>
+      </div>`;
+    });
+    el.innerHTML=html;
+  }
+
+  if(tab==='all'){
+    document.getElementById('tab-all').innerHTML=USERS.map(u=>`
+      <div class="emp-card">
+        <div class="av">${u.avatar}</div>
+        <div class="info"><strong>${u.nama}</strong><small>${u.nip} • ${u.dept} • PIN: ${u.pin}</small></div>
+      </div>`).join('');
+  }
+
+  if(tab==='history'){
+    const recent=S.history.slice(-20).reverse();
+    document.getElementById('tab-history').innerHTML=recent.length?recent.map(h=>`
+      <div class="log-item">
+        <div class="dot ${h.tipe.toLowerCase()}"></div>
+        <div class="info"><strong>${h.nama}</strong><small>${h.tipe} • ${h.keterangan} • ${h.tanggal}</small></div>
+        <div class="time">${h.jam}</div>
+      </div>`).join(''):'<div class="empty">Belum ada riwayat</div>';
+  }
+}
+
+// =================== PROFILE ===================
+function updateProfile(){
+  if(!S.currentUser)return;
+  const u=S.currentUser;
+  document.getElementById('pAv').textContent=u.avatar;
+  document.getElementById('pName').textContent=u.nama;
+  document.getElementById('pDept').textContent=u.nip+' • '+u.dept;
+
+  const my=S.history.filter(h=>h.userId===u.id);
+  const now=new Date();
+  const thisMonth=my.filter(h=>{const d=new Date(h.tanggal);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const hadir=thisMonth.filter(h=>h.tipe==='IN').length;
+  const terlambat=thisMonth.filter(h=>h.tipe==='IN'&&h.keterangan==='Terlambat').length;
+  const lembur=thisMonth.filter(h=>{const p=h.jam.split(':');return h.tipe==='OUT'&&+p[0]>=18;}).length;
+  const pct=hadir?Math.round(((hadir-terlambat)/hadir)*100):0;
+
+  document.getElementById('pStats').innerHTML=`
+    <div class="s-mini"><div class="n" style="color:var(--ok)">${hadir}</div><div class="l">Hadir</div></div>
+    <div class="s-mini"><div class="n" style="color:var(--warn)">${terlambat}</div><div class="l">Terlambat</div></div>
+    <div class="s-mini"><div class="n" style="color:var(--a)">${lembur}</div><div class="l">Lembur</div></div>
+    <div class="s-mini"><div class="n" style="color:var(--gold)">${pct}%</div><div class="l">Tepat Waktu</div></div>`;
+
+  document.getElementById('pBadges').innerHTML=BADGES.map(b=>{
+    const earn=S.badges.includes(b.id);
+    return `<div class="bg-card ${earn?'earn':'lock'}"><span class="e">${b.icon}</span><div class="nm">${b.name}</div></div>`;
+  }).join('');
+}
+
+function logout(){S.currentUser=null;S.pin='';updateDots();renderUserSel();document.getElementById('pinAvatar').textContent='👤';document.getElementById('pinGreeting').textContent='Masukkan PIN';document.getElementById('pinName').textContent='Pilih akunmu dulu';go('pinScr');}
+
+// =================== NOTIFICATIONS ===================
+async function initNotif(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    document.addEventListener('click',()=>{
+      if(Notification.permission==='default')Notification.requestPermission();
+    },{once:true});
+  }
+  if(Notification.permission==='granted')setInterval(checkReminder,30000);
+}
+
+function checkReminder(){
+  if(!S.currentUser)return;
+  const now=new Date();
+  const hr=now.getHours(),mn=now.getMinutes();
+  if(hr<8||(hr===8&&mn<5)||hr>=13)return;
+  const today=now.toLocaleDateString('id-ID');
+  const hasAbsen=S.history.some(h=>h.userId===S.currentUser.id&&h.tanggal===today&&h.tipe==='IN');
+  if(!hasAbsen){
+    const last=localStorage.getItem('fp_lastNotif');
+    if(last===today)return;
+    new Notification('⚠️ Belum Absen!',{body:S.currentUser.nama+', kamu belum absen masuk hari ini!',tag:'remind-'+today,requireInteraction:true});
+    localStorage.setItem('fp_lastNotif',today);
+  }
+}
+
+function showAchievementNotif(badge){
+  if(Notification.permission!=='granted')return;
+  new Notification('🏅 Achievement Baru!',{body:badge.name+': '+badge.desc,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">'+badge.icon+'</text></svg>'});
+}
+
+// =================== MODAL ===================
+function showModal(badge){
+  document.getElementById('moIcon').textContent=badge.icon;
+  document.getElementById('moName').textContent=badge.name;
+  document.getElementById('moDesc').textContent=badge.desc;
+  document.getElementById('badgeModal').classList.add('on');
+}
+function closeModal(){document.getElementById('badgeModal').classList.remove('on');}
+
+// =================== CONFETTI ===================
+function confetti(){
+  const c=document.getElementById('cc');c.innerHTML='';
+  const cols=['#e94560','#533483','#ffd700','#00b894','#fd79a8','#0984e3'];
+  for(let i=0;i<40;i++){
+    const p=document.createElement('div');p.className='cp';
+    p.style.left=Math.random()*100+'%';p.style.top=Math.random()*100+'%';
+    p.style.background=cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration=(Math.random()*1+.5)+'s';
+    p.style.animationDelay=(Math.random()*.5)+'s';
+    c.appendChild(p);
+  }
+  setTimeout(()=>c.innerHTML='',3000);
+}
+
+// =================== DEMO DATA ===================
+if(!S.history.length){
+  const now=new Date();
+  const today=now.toLocaleDateString('id-ID');
+  S.history=[
+    {userId:1,nama:'Budi Santoso',nip:'NIP001',dept:'IT',tanggal:today,jam:'07:45:12',tipe:'IN',keterangan:'Hadir',foto:''},
+    {userId:2,nama:'Sari Dewi',nip:'NIP002',dept:'HRD',tanggal:today,jam:'08:03:21',tipe:'IN',keterangan:'Terlambat',foto:''},
+    {userId:3,nama:'Andi Wijaya',nip:'NIP003',dept:'Keuangan',tanggal:today,jam:'07:58:44',tipe:'IN',keterangan:'Hadir',foto:''},
+  ];
+  localStorage.setItem('fp_history',JSON.stringify(S.history));
+}
+</script>
+</body>
+</html>
