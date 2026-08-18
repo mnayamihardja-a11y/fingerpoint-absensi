@@ -439,7 +439,14 @@ function checkPin(){
     S.pin='';
     updateDots();
     document.getElementById('pinErr').textContent='';
-    go('homeScr');
+    const now=new Date();
+    const today=now.toLocaleDateString('id-ID');
+    const sudahAbsen=S.history.some(h=>h.userId===S.currentUser.id&&h.tanggal===today&&h.tipe==='IN');
+    if(!sudahAbsen){
+      startAbsen('IN');
+    }else{
+      go('homeScr');
+    }
   }else{
     document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('err'));
     document.getElementById('pinErr').textContent='PIN salah!';
@@ -770,16 +777,6 @@ function confetti(){
 }
 
 // =================== DEMO DATA ===================
-if(!S.history.length){
-  const now=new Date();
-  const today=now.toLocaleDateString('id-ID');
-  S.history=[
-    {userId:1,nama:'Budi Santoso',nip:'NIP001',dept:'IT',tanggal:today,jam:'07:45:12',tipe:'IN',keterangan:'Hadir',foto:''},
-    {userId:2,nama:'Sari Dewi',nip:'NIP002',dept:'HRD',tanggal:today,jam:'08:03:21',tipe:'IN',keterangan:'Terlambat',foto:''},
-    {userId:3,nama:'Andi Wijaya',nip:'NIP003',dept:'Keuangan',tanggal:today,jam:'07:58:44',tipe:'IN',keterangan:'Hadir',foto:''},
-  ];
-  localStorage.setItem('fp_history',JSON.stringify(S.history));
-}
 </script>
 </body>
 </html>
